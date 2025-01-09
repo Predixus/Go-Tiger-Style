@@ -1,2 +1,2 @@
 # Go-Tiger-Style
-Adaptation of Tigerbeetles Tigerstyle, for golang
+Adaptation of Tigerbeetle's Tigerstyle, for golang
