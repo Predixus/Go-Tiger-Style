@@ -122,10 +122,19 @@ that we need to make that are specific to Go!:
       }
   ```
 
-  If an assertion is raised, then the Counter has been incorrectly updated with a negative integer. This would highlight two programmer errors:
+  If an assertion is raised, then the Counter has been incorrectly updated with a negative integer.
+  This would highlight two programmer errors:
 
   1. `count` should be of type `int16`
-  2. The calling code (incorrectly) expected to pass negative integers
+  2. The calling code expected to be able to pass negative integers
 
 - Assert the Positive Space, Negative Space and _Property Space_. In the plane of variable expressions, asserting
-  just the positive and negative space Presents as points.
+  just the positive and negative spaces present as points. `x=5` or `y!=7`. There are many more points in the
+  programming space that are not tested, and could be impractical to test. So instead test the property space:
+  ```go
+      if (y<=6) {
+          x > 5
+      } else {
+          // more conditions
+      }
+  ```
