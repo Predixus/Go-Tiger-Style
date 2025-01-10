@@ -125,12 +125,79 @@ that we need to make that are specific to Go!:
 
 - Assert the _Property Space_ wherever possible.
 
-  If a function has an input `x` and an output `y` then any particular input output pairing represents
-  a point in a 2D space.
-
-  So when performing table tests, we are often checking for input-output pairs, which are just points
-  in this space. That is, we are not exploring all of the potential search space. So instead, by checking
-  properties of this input-output pairing we get a fuller view of the behaviour of the function.
+  Property-based testing expands beyond traditional table-driven tests by verifying properties
+  that should hold true for entire classes of inputs, rather than just specific examples. While
+  table tests verify individual points in the input-output space, property tests verify relationships
+  that should hold across the entire space.
 
   ![Property based test image](./assets/images/prop_based_test_dark.png#gh-dark-mode-only)
   ![Property based test image](./assets/images/prop_based_test_light.pngpng#gh-light-mode-only)
+
+  For example, consider a function that reverses a string:
+
+  ```go
+  import (
+      "testing"
+      "github.com/stretchr/testify/assert"
+  )
+
+  // Traditional table test
+  func TestReverse(t *testing.T) {
+      tests := []struct {
+          input    string
+          expected string
+      }{
+          {"hello", "olleh"},
+          {"world", "dlrow"},
+      }
+      for _, tt := range tests {
+          got := Reverse(tt.input)
+          assert.Equal(t, tt.expected, got, "Reverse(%q)", tt.input)
+      }
+  }
+
+  // Property-based test
+  func FuzzReverse(f *testing.F) {
+    // Seed the corpus with the original test cases
+    seeds := []string{"", "a", "hello", "12345", "!@#$%"}
+    for _, seed := range seeds {
+        f.Add(seed)
+    }
+
+    // Fuzz test that verifies two canoncial properties of `Reverse`
+    f.Fuzz(func(t *testing.T, input string) {
+        // Property 1: reversing twice should return the original string
+        if twice := Reverse(Reverse(input)); twice!=input {
+            t.Errorf("Double reverse failed: got %q, want %q", twice, input)
+        }
+
+        // Property 2: length should be preserved
+        if reversed := Reverse(input); len(reversed) != len(input) {
+            t.Errorf("Length not preserved: got %d, want %d", len(reversed), len(input))
+        }
+    })
+  }
+  ```
+
+  Key properties to consider testing:
+
+  1. **Invariants**: Properties that should always hold true
+  2. **Inverse operations**: Operations that should cancel each other out. E.g. encode/decode
+  3. **Idempotency**: Operations that yield the same result when applied multiple times
+  4. **Non-Idempotency**: Operations that do _not_ yield the same result when applied multiple
+     times. E.g. a hashing algorithm
+
+  When using runtime assertions to test for properties, focus on invariants that indicate
+  programmer errors:
+
+  ```go
+  func (v *Vector) Add(other *Vector) {
+      assert(len(v.elements) == len(other.elements), "vectors must have same dimension")
+      for i := range v.elements {
+          v.elements[i] += other.elements[i]
+      }
+  }
+  ```
+
+  And remember: Property-based testing complements, not replaces, traditional testing
+  approaches. Use both to achieve the required test coverage for your application.
