@@ -104,10 +104,10 @@ that we need to make that are specific to Go!:
 
      ```go
      // Good: Clear buffering intent for synchronous communication
-     ch_sync := make(chan int)
+     chSync := make(chan int)
 
      // Good: Buffered for async communication, up to a capacity
-     ch_async := make(chan int, 5)
+     chAsync := make(chan int, 5)
 
      // Bad: Default to unbuffered without considering communication patterns
      ch := make(chan int)  // Might deadlock if async communication is needed
