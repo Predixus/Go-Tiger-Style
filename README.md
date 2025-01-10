@@ -172,11 +172,7 @@ that we need to make that are specific to Go!:
   //go:build !debug
   package main
 
-  func assert(condition boolean, msg string) {
-    if condition {
-        panic(msg)
-    }
-  }
+  func assert(condition boolean, msg string) {}
   ```
 
   And used like so:
