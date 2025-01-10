@@ -42,19 +42,108 @@ that we need to make that are specific to Go!:
     type myVar int
   ```
 
-- Specify capacity when allocating using `make`:
+- Always be explicit about capacity, when allocating via `make`:
 
-  ```go
-    myVar := make([]int16, 5, 5)
-    cap(myVar) // 5
-  ```
+  1. Preventing Hidden Allocations in Slices
 
-  instead of
+     Pre-allocate capacity when the final size is known to avoid expensive grow operations:
 
-  ```go
-    myVar := make([]int16, 5)
-    cap(myVar) // 5
-  ```
+     ```go
+     // Good: Single allocation with known final size
+     data := make([]int16, 0, 1000)
+     for i := 0; i < 1000; i++ {
+         data = append(data, int16(i))  // No reallocation needed
+     }
+
+     // Bad: Multiple allocations as slice grows
+     data := make([]int16, 0)
+     for i := 0; i < 1000; i++ {
+         data = append(data, int16(i))  // May trigger reallocation
+     }
+     ```
+
+  2. Preventing Capacity Sharing Between Slices
+
+     Explicitly match capacity to length when you want to prevent slice operations from
+     accessing underlying array capacity:
+
+     ```go
+     // Good: No capacity sharing
+     original := make([]int16, 5, 5)
+     slice2 := original[0:3]     // slice2 has capacity of 3
+     slice2 = append(slice2, 6)  // Forces new allocation, original unchanged
+
+     // Bad: Hidden capacity sharing
+     original := make([]int16, 5, 10)
+     slice2 := original[0:3]     // slice2 has capacity of 7
+     slice2 = append(slice2, 6)  // Modifies original's backing array!
+     ```
+
+  3. Preventing Rehashing when Initialising Maps
+
+     Pre-size maps when the approximate size is known to avoid expensive rehashing operations:
+
+     ```go
+     // Good: Single hash table allocation
+     users := make(map[string]User, 1000)
+     for i := 0; i < 1000; i++ {
+         users[fmt.Sprintf("user%d", i)] = User{}  // No rehashing needed
+     }
+
+     // Bad: Multiple rehashing operations
+     users := make(map[string]User)  // Default small capacity
+     for i := 0; i < 1000; i++ {
+         users[fmt.Sprintf("user%d", i)] = User{}  // Forces periodic rehashing
+     }
+     ```
+
+  4. Preventing Deadlocks in Channels
+
+     Be explicit about channel buffering intent, in the name of the variable to
+     prevent accidental deadlocks:
+
+     ```go
+     // Good: Clear buffering intent for synchronous communication
+     ch_sync := make(chan int)
+
+     // Good: Buffered for async communication, up to a capacity
+     ch_async := make(chan int, 5)
+
+     // Bad: Default to unbuffered without considering communication patterns
+     ch := make(chan int)  // Might deadlock if async communication is needed
+     ```
+
+  5. Explicit size Buffer Pools to Prevent Growth
+
+     When implementing buffer pools, explicit capacity helps prevent buffer growth:
+
+     ```go
+     // Good: Fixed-size buffer pool
+     type Pool struct {
+         buffers sync.Pool
+     }
+
+     func NewPool() *Pool {
+         return &Pool{
+             buffers: sync.Pool{
+                 New: func() interface{} {
+                     return make([]byte, 0, 4096)  // Fixed capacity
+                 },
+             },
+         }
+     }
+
+     // Bad: Growable buffers can escape size constraints
+     func NewPool() *Pool {
+         return &Pool{
+             buffers: sync.Pool{
+                 New: func() interface{} {
+                     return make([]byte, 0)  // Can grow unbounded
+                 },
+             },
+         }
+     }
+     ```
 
 - Go does not have any natural notion of `assert`. The Go development team have stated their view on this:
 
