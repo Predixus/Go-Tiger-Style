@@ -15,7 +15,7 @@ As taken directly from the TigerStyle docs:
 > understanding is missing."
 
 For our operations at Predixus, we are building data driven applications in Go. This, if done earnestly, results
-in us going into the unknown and recovering the preverbial gold to distribute. And so the goal of a style is to
+in us going into the unknown and recovering the proverbial gold to distribute. And so the goal of a style is to
 guide and support development through the unknown.
 
 So, that being said, let's get into it.
@@ -201,3 +201,6 @@ that we need to make that are specific to Go!:
 
   And remember: Property-based testing complements, not replaces, traditional testing
   approaches. Use both to achieve the required test coverage for your application.
+
+  - Use Go's static analysis tools (`go vet`, `staticcheck`, `golangci-lint`) at their
+    strictest settings.
