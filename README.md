@@ -123,16 +123,14 @@ that we need to make that are specific to Go!:
   1. `count` should be of type `int16`
   2. The calling code expected to be able to pass negative integers
 
-- Assert the Positive Space, Negative Space and _Property Space_.
+- Assert the _Property Space_ wherever possible.
 
-  In the plane of variable expressions, asserting
-  just the positive and negative spaces present as points. There are many more points in the
-  programming space that are not tested, and could be impractical to test. So instead test the property space:
+  If a function has an input `x` and an output `y` then any particular input output pairing represents
+  a point in a 2D space.
 
-  ```go
-      if (y<=6) {
-          x > 5
-      } else {
-          // more conditions
-      }
-  ```
+  So when performing table tests, we are often checking for input-output pairs, which are just points
+  in this space. That is, we are not exploring all of the potential search space. So instead, by checking
+  properties of this input-output pairing we get a fuller view of the behaviour of the function.
+
+  ![Property based test image](./assets/images/prop_based_test_dark.png#gh-dark-mode-only)
+  ![Property based test image](./assets/images/prop_based_test_light.pngpng#gh-light-mode-only)
