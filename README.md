@@ -15,19 +15,15 @@ As taken directly from the TigerStyle docs:
 > understanding is missing."
 
 For our operations at Predixus, we are building data driven applications in Go. This, if done earnestly, results
-in us going into the unknown and recovering the preverbial gold to distribute. And so, there
-
-And so the goal of a style is to guide and support development with 3 north stars:
-
-- Effectiveness - The software _has_ to work
-- Simplicity - The design goals need to come together in as simple a manner as possible
-- Robustness - There needs to be a baseline level of robustness
+in us going into the unknown and recovering the preverbial gold to distribute. And so the goal of a style is to
+guide and support development through the unknown.
 
 So, that being said, let's get into it.
 
 ## Technical Debt
 
-There is nothing to add here. Tigerstyle nailed it. Refer to [their comments](https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md#technical-debt) on technical debt.
+There is nothing to add here. Tigerstyle nailed it. Refer to
+[their comments](https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md#technical-debt) on technical debt.
 
 ## Safety
 
@@ -60,10 +56,9 @@ that we need to make that are specific to Go!:
     cap(myVar) // 5
   ```
 
-- Assertions:
+- Go does not have any natural notion of `assert`. The Go development team have stated their view on this:
 
-  - Go does not have any natural notion of `assert`. The Go development team have stated their view on this:
-    > ["...programmers use them as a crutch to avoid thinking about proper error handling and reporting"](https://go.dev/doc/faq#assertions)
+  > ["...programmers use them as a crutch to avoid thinking about proper error handling and reporting"](https://go.dev/doc/faq#assertions)
 
   Completely transparent error handling in Go is indeed one of its strongest features - there is no need to use
   assertions to replace it. But there is value in using assertions to capture programmer errors that should be
@@ -79,9 +74,9 @@ that we need to make that are specific to Go!:
   package main
 
   func assert(condition boolean, msg string) {
-      if !condition {
-          panic(msg)
-      }
+    if !condition {
+        panic(msg)
+    }
   }
 
   //assert_release.go
@@ -89,48 +84,51 @@ that we need to make that are specific to Go!:
   package main
 
   func assert(condition boolean, msg string) {
-      if condition {
-          panic(msg)
-      }
+    if condition {
+        panic(msg)
+    }
   }
   ```
 
-  And use like so:
+  And used like so:
 
   ```go
-      package main
+    package main
 
-      type Counter struct {
-          count     int16
-      }
+    type Counter struct {
+        count     int16
+    }
 
-      func (c *Counter) Increment() {
-          c.count += 1
-      }
+    func (c *Counter) Increment() {
+        c.count += 1
+    }
 
-      func (c *Counter) Reset() {
-          c.count = 0
-      }
+    func (c *Counter) Reset() {
+        c.count = 0
+    }
 
-      func (c *Counter) Update(u int16) {
-          c.count += u
-          assert(c.count>=0, "Count cannot be negative")
-      }
+    func (c *Counter) Update(u int16) {
+        c.count += u
+        assert(c.count>=0, "Count cannot be negative")
+    }
 
-      func (c *Counter) Count() int16 {
-          return c.count
-      }
+    func (c *Counter) Count() int16 {
+        return c.count
+    }
   ```
 
   If an assertion is raised, then the Counter has been incorrectly updated with a negative integer.
-  This would highlight two programmer errors:
+  This highlights two programmer errors:
 
   1. `count` should be of type `int16`
   2. The calling code expected to be able to pass negative integers
 
-- Assert the Positive Space, Negative Space and _Property Space_. In the plane of variable expressions, asserting
-  just the positive and negative spaces present as points. `x=5` or `y!=7`. There are many more points in the
+- Assert the Positive Space, Negative Space and _Property Space_.
+
+  In the plane of variable expressions, asserting
+  just the positive and negative spaces present as points. There are many more points in the
   programming space that are not tested, and could be impractical to test. So instead test the property space:
+
   ```go
       if (y<=6) {
           x > 5
