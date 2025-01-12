@@ -1,7 +1,8 @@
-.PHONY: bench
+.PHONY: bench test
 
-bench: .bench
 
-.bench:
-	go test -bench=. -benchmem -count=5       
+bench:
+	go test -bench=. -benchmem
 
+test:
+	go test -v ./...

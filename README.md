@@ -48,88 +48,100 @@ that we need to make that are specific to Go!:
      }
      ```
 
-  2. Preventing Capacity Sharing Between Slices
+2. Understanding Capacity Sharing Between Slices
 
-     Explicitly match capacity to length when you want to prevent slice operations from
-     accessing underlying array capacity:
+   There are two approaches to handling slice capacity sharing, each with different trade-offs:
 
-     ```go
-     // Good: No capacity sharing
-     original := make([]int16, 5, 5)
-     slice2 := original[0:3]     // slice2 has capacity of 3
-     slice2 = append(slice2, 6)  // Forces new allocation, original unchanged
+   The first, is safe but costly (in allocations). This approach should be used when slice independence
+   needs to be garunteed.
 
-     // Bad: Hidden capacity sharing
-     original := make([]int16, 5, 10)
-     slice2 := original[0:3]     // slice2 has capacity of 7
-     slice2 = append(slice2, 6)  // Modifies original's backing array!
-     ```
+   ```go
+   original := make([]int16, 5, 5)
+   slice2 := make([]int16, 3)
+   copy(slice2, original[0:3]) // Copy just the elements we want
+   slice2 = append(slice2, 6)  // Now this truly won't affect original
+   ```
 
-  3. Preventing Rehashing when Initialising Maps
+   The second approach is fast, but requires careful handling as capacity of a single slice is shared.
+   Use when performance is critical and the implications are well understood.
 
-     Pre-size maps when the approximate size is known to avoid expensive rehashing operations:
+   ```go
+   original := make([]int16, 5, 10)
+   slice2 := original[0:3]     // slice2 shares backing array
+   slice2 = append(slice2, 6)  // Modifies original's backing array!
+   ```
 
-     ```go
-     // Good: Single hash table allocation
-     users := make(map[string]User, 1000)
-     for i := 0; i < 1000; i++ {
-         users[fmt.Sprintf("user%d", i)] = User{}  // No rehashing needed
-     }
+   Choose between these patterns based on your needs:
 
-     // Bad: Multiple rehashing operations
-     users := make(map[string]User)  // Default small capacity
-     for i := 0; i < 1000; i++ {
-         users[fmt.Sprintf("user%d", i)] = User{}  // Forces periodic rehashing
-     }
-     ```
+   - Use no-sharing when slice independence is crucial for correctness
+   - Use sharing when performance is critical and you can carefully manage the slice relationships
+   - The sharing approach is ~140x faster but requires more careful programming
 
-  4. Preventing Deadlocks in Channels
+3. Preventing Rehashing when Initialising Maps
 
-     Be explicit about channel buffering intent, in the name of the variable to
-     prevent accidental deadlocks:
+   Pre-size maps when the approximate size is known to avoid expensive rehashing operations:
 
-     ```go
-     // Good: Clear buffering intent for synchronous communication
-     chSync := make(chan int)
+   ```go
+   // Good: Single hash table allocation
+   users := make(map[string]User, 1000)
+   for i := 0; i < 1000; i++ {
+       users[fmt.Sprintf("user%d", i)] = User{}  // No rehashing needed
+   }
 
-     // Good: Buffered for async communication, up to a capacity
-     chAsync := make(chan int, 5)
+   // Bad: Multiple rehashing operations
+   users := make(map[string]User)  // Default small capacity
+   for i := 0; i < 1000; i++ {
+       users[fmt.Sprintf("user%d", i)] = User{}  // Forces periodic rehashing
+   }
+   ```
 
-     // Bad: Default to unbuffered without considering communication patterns
-     ch := make(chan int)  // Might deadlock if async communication is needed
-     ```
+4. Preventing Deadlocks in Channels
 
-  5. Explicit size Buffer Pools to Prevent Growth
+   Be explicit about channel buffering intent, in the name of the variable to
+   prevent accidental deadlocks:
 
-     When implementing buffer pools, explicit capacity helps prevent buffer growth:
+   ```go
+   // Good: Clear buffering intent for synchronous communication
+   chSync := make(chan int)
 
-     ```go
-     // Good: Fixed-size buffer pool
-     type Pool struct {
-         buffers sync.Pool
-     }
+   // Good: Buffered for async communication, up to a capacity
+   chAsync := make(chan int, 5)
 
-     func NewPool() *Pool {
-         return &Pool{
-             buffers: sync.Pool{
-                 New: func() interface{} {
-                     return make([]byte, 0, 4096)  // Fixed capacity
-                 },
-             },
-         }
-     }
+   // Bad: Default to unbuffered without considering communication patterns
+   ch := make(chan int)  // Might deadlock if async communication is needed
+   ```
 
-     // Bad: Growable buffers can escape size constraints
-     func NewPool() *Pool {
-         return &Pool{
-             buffers: sync.Pool{
-                 New: func() interface{} {
-                     return make([]byte, 0)  // Can grow unbounded
-                 },
-             },
-         }
-     }
-     ```
+5. Explicit size Buffer Pools to Prevent Growth
+
+   When implementing buffer pools, explicit capacity helps prevent buffer growth:
+
+   ```go
+   // Good: Fixed-size buffer pool
+   type Pool struct {
+       buffers sync.Pool
+   }
+
+   func NewPool() *Pool {
+       return &Pool{
+           buffers: sync.Pool{
+               New: func() interface{} {
+                   return make([]byte, 0, 4096)  // Fixed capacity
+               },
+           },
+       }
+   }
+
+   // Bad: Growable buffers can escape size constraints
+   func NewPool() *Pool {
+       return &Pool{
+           buffers: sync.Pool{
+               New: func() interface{} {
+                   return make([]byte, 0)  // Can grow unbounded
+               },
+           },
+       }
+   }
+   ```
 
 - Go does not have any natural notion of `assert`. The Go development team have stated their view on this:
 
