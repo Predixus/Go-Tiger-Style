@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
 func SliceAllocateCapacity() {
 	data := make([]int16, 0, 1000)
@@ -109,4 +112,55 @@ func ChannelAsyncMulti() []int {
 	<-done
 	<-done
 	return result
+}
+
+type FixedPool struct {
+	buffers sync.Pool
+	size    int
+}
+
+func NewFixedPool(size int) *FixedPool {
+	return &FixedPool{
+		buffers: sync.Pool{
+			New: func() interface{} {
+				return make([]byte, 0, size)
+			},
+		},
+		size: size,
+	}
+}
+
+func (p *FixedPool) Get() []byte {
+	buf := p.buffers.Get().([]byte)
+	return buf[:0] // Reset length but keep capacity
+}
+
+func (p *FixedPool) Put(buf []byte) {
+	if cap(buf) == p.size {
+		p.buffers.Put(buf)
+	}
+	// Discard buffers that have grown beyond our fixed size
+}
+
+// GrowablePool allows buffers to grow
+type GrowablePool struct {
+	buffers sync.Pool
+}
+
+func NewGrowablePool() *GrowablePool {
+	return &GrowablePool{
+		buffers: sync.Pool{
+			New: func() interface{} {
+				return make([]byte, 0)
+			},
+		},
+	}
+}
+
+func (p *GrowablePool) Get() []byte {
+	return p.buffers.Get().([]byte)[:0]
+}
+
+func (p *GrowablePool) Put(buf []byte) {
+	p.buffers.Put(buf)
 }

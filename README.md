@@ -143,6 +143,11 @@ that we need to make that are specific to Go!:
    }
    ```
 
+   Choose based on your requirements:
+
+   - Use fixed-size pools when memory constraints are critical
+   - Use growable pools when performance is the priority
+
 - Go does not have any natural notion of `assert`. The Go development team have stated their view on this:
 
   > ["...programmers use them as a crutch to avoid thinking about proper error handling and reporting"](https://go.dev/doc/faq#assertions)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sync"
 	"testing"
 )
 
@@ -144,5 +145,146 @@ func TestChannel(t *testing.T) {
 				t.Errorf("At index %d: expected %d, got %d", i, i, result[i])
 			}
 		}
+	})
+}
+
+func TestBufferPools(t *testing.T) {
+	t.Run("FixedPool", func(t *testing.T) {
+		pool := NewFixedPool(64)
+
+		// Get a buffer and verify its capacity
+		buf := pool.Get()
+		if cap(buf) != 64 {
+			t.Errorf("Expected capacity 64, got %d", cap(buf))
+		}
+
+		// Try to grow the buffer
+		largerData := make([]byte, 128)
+		grown := append(buf, largerData...)
+
+		// Put back the grown buffer
+		pool.Put(grown)
+
+		// Get another buffer - should get a fresh one of original size
+		newBuf := pool.Get()
+		if cap(newBuf) != 64 {
+			t.Errorf("Expected capacity 64 after grow attempt, got %d", cap(newBuf))
+		}
+	})
+
+	t.Run("GrowablePool", func(t *testing.T) {
+		pool := NewGrowablePool()
+
+		// Get a buffer and grow it
+		buf := pool.Get()
+		largerData := make([]byte, 128)
+		grown := append(buf, largerData...)
+
+		// Put back the grown buffer
+		pool.Put(grown)
+
+		// Get another buffer - might get the grown one
+		newBuf := pool.Get()
+		if cap(newBuf) < 128 {
+			t.Logf("Note: Got a fresh buffer instead of reusing grown one")
+		}
+	})
+}
+
+// Benchmark functions
+func BenchmarkFixedPool(b *testing.B) {
+	pool := NewFixedPool(64)
+	data := make([]byte, 32) // Data smaller than buffer
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	b.Run("Normal Use", func(b *testing.B) {
+		for n := 0; n < b.N; n++ {
+			buf := pool.Get()
+			buf = append(buf, data...)
+			pool.Put(buf)
+		}
+	})
+
+	b.Run("Growth Attempt", func(b *testing.B) {
+		largeData := make([]byte, 128) // Data larger than buffer
+		for n := 0; n < b.N; n++ {
+			buf := pool.Get()
+			buf = append(buf, largeData...)
+			pool.Put(buf) // Will discard grown buffer
+		}
+	})
+}
+
+func BenchmarkGrowablePool(b *testing.B) {
+	pool := NewGrowablePool()
+	data := make([]byte, 32)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	b.Run("Normal Use", func(b *testing.B) {
+		for n := 0; n < b.N; n++ {
+			buf := pool.Get()
+			buf = append(buf, data...)
+			pool.Put(buf)
+		}
+	})
+
+	b.Run("Growth Allowed", func(b *testing.B) {
+		largeData := make([]byte, 128)
+		for n := 0; n < b.N; n++ {
+			buf := pool.Get()
+			buf = append(buf, largeData...)
+			pool.Put(buf) // Will retain grown buffer
+		}
+	})
+}
+
+// Concurrent usage test
+func TestConcurrentUsage(t *testing.T) {
+	t.Run("FixedPool", func(t *testing.T) {
+		pool := NewFixedPool(64)
+		var wg sync.WaitGroup
+		workers := 100
+		iterations := 1000
+
+		wg.Add(workers)
+		for i := 0; i < workers; i++ {
+			go func() {
+				defer wg.Done()
+				data := make([]byte, 32)
+
+				for j := 0; j < iterations; j++ {
+					buf := pool.Get()
+					buf = append(buf, data...)
+					pool.Put(buf)
+				}
+			}()
+		}
+		wg.Wait()
+	})
+
+	t.Run("GrowablePool", func(t *testing.T) {
+		pool := NewGrowablePool()
+		var wg sync.WaitGroup
+		workers := 100
+		iterations := 1000
+
+		wg.Add(workers)
+		for i := 0; i < workers; i++ {
+			go func() {
+				defer wg.Done()
+				data := make([]byte, 32)
+
+				for j := 0; j < iterations; j++ {
+					buf := pool.Get()
+					buf = append(buf, data...)
+					pool.Put(buf)
+				}
+			}()
+		}
+		wg.Wait()
 	})
 }
