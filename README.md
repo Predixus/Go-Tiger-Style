@@ -18,8 +18,6 @@ For our operations at Predixus, we are building data driven applications in Go. 
 in us going into the unknown and recovering the proverbial gold to distribute. And so the goal of a style is to
 guide and support development through the unknown.
 
-So, that being said, let's get into it.
-
 ## Technical Debt
 
 There is nothing to add here. Tigerstyle nailed it. Refer to
@@ -29,18 +27,6 @@ There is nothing to add here. Tigerstyle nailed it. Refer to
 
 [NASAs Power of 10](https://spinroot.com/gerard/pdf/P10.pdf) still applies. But there are some modifications
 that we need to make that are specific to Go!:
-
-- Use explicitely-sized types for everything:
-
-  ```go
-    type myVar int16
-  ```
-
-  instead of
-
-  ```go
-    type myVar int
-  ```
 
 - Always be explicit about capacity, when allocating via `make`:
 
