@@ -23,7 +23,10 @@ guide and support development through the unknown.
 There is nothing to add here. Tigerstyle nailed it. Refer to
 [their comments](https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md#technical-debt) on technical debt.
 
-## Safety
+## Safety & Performance
+
+The code in many of these ammenedements has been implemented, tested, benchmarked and fuzzed. Look at [bench.txt](bench.txt)
+for details on the benchmarks and the `main.go` & `main_test.go` files for details on the tests.
 
 [NASAs Power of 10](https://spinroot.com/gerard/pdf/P10.pdf) still applies. But there are some modifications
 that we need to make that are specific to Go!:
@@ -52,30 +55,30 @@ that we need to make that are specific to Go!:
 
    There are two approaches to handling slice capacity sharing, each with different trade-offs:
 
-   The first, is safe but costly (in allocations). This approach should be used when slice independence
-   needs to be garunteed.
+   - The first, is safe but costly (in allocations). This approach should be used when slice independence
+     needs to be garunteed.
 
-   ```go
-   original := make([]int16, 5, 5)
-   slice2 := make([]int16, 3)
-   copy(slice2, original[0:3]) // Copy just the elements we want
-   slice2 = append(slice2, 6)  // Now this truly won't affect original
-   ```
+     ```go
+     original := make([]int16, 5, 5)
+     slice2 := make([]int16, 3)
+     copy(slice2, original[0:3]) // Copy just the elements we want
+     slice2 = append(slice2, 6)  // Now this truly won't affect original
+     ```
 
-   The second approach is fast, but requires careful handling as capacity of a single slice is shared.
-   Use when performance is critical and the implications are well understood.
+   - The second approach is fast, but requires careful handling as capacity of a single slice is shared.
+     Use when performance is critical and the implications are well understood.
 
-   ```go
-   original := make([]int16, 5, 10)
-   slice2 := original[0:3]     // slice2 shares backing array
-   slice2 = append(slice2, 6)  // Modifies original's backing array!
-   ```
+     ```go
+     original := make([]int16, 5, 10)
+     slice2 := original[0:3]     // slice2 shares backing array
+     slice2 = append(slice2, 6)  // Modifies original's backing array!
+     ```
 
    Choose between these patterns based on your needs:
 
    - Use no-sharing when slice independence is crucial for correctness
    - Use sharing when performance is critical and you can carefully manage the slice relationships
-   - The sharing approach is ~140x faster but requires more careful programming
+   - The sharing approach is ~140x faster but requires more careful programming (inspect the benchmarks)
 
 3. Preventing Rehashing when Initialising Maps
 
@@ -211,7 +214,7 @@ that we need to make that are specific to Go!:
   1. `count` should be of type `int16`
   2. The calling code expected to be able to pass negative integers
 
-- Assert the _Property Space_ wherever possible.
+- Assert the _Property Space_ wherever possible, and use Golangs Fuzzer to test it
 
   Property-based testing expands beyond traditional table-driven tests by verifying properties
   that should hold true for entire classes of inputs, rather than just specific examples. While
@@ -226,10 +229,9 @@ that we need to make that are specific to Go!:
   ```go
   import (
       "testing"
-      "github.com/stretchr/testify/assert"
   )
 
-  // Traditional table test
+  // Traditional table test - tests input output pairs
   func TestReverse(t *testing.T) {
       tests := []struct {
           input    string
@@ -267,7 +269,7 @@ that we need to make that are specific to Go!:
   }
   ```
 
-  Key properties to consider testing:
+  Key properties to consider testing when fuzzing:
 
   1. **Invariants**: Properties that should always hold true
   2. **Inverse operations**: Operations that should cancel each other out. E.g. encode/decode
@@ -275,7 +277,7 @@ that we need to make that are specific to Go!:
   4. **Non-Idempotency**: Operations that do _not_ yield the same result when applied multiple
      times. E.g. a hashing algorithm
 
-  When using runtime assertions to test for properties, focus on invariants that indicate
+  When using runtime assertions on properties, focus on invariants that indicate
   programmer errors:
 
   ```go
@@ -291,4 +293,4 @@ that we need to make that are specific to Go!:
   approaches. Use both to achieve the required test coverage for your application.
 
   - Use Go's static analysis tools (`go vet`, `staticcheck`, `golangci-lint`) at their
-    strictest settings.
+    strictest settings

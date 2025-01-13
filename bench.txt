@@ -1,0 +1,21 @@
+go test -bench=. -benchmem
+goos: linux
+goarch: amd64
+pkg: github.com/Predixus/go-tiger-style
+cpu: 12th Gen Intel(R) Core(TM) i9-12900H
+BenchmarkSlice/SliceAllocateCapacity-20         	 4385110	       267.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSlice/SliceLetCapacityGrow-20          	  659047	      1997 ns/op	    6520 B/op	      10 allocs/op
+BenchmarkSlice/NoSliceCapacitySharing-20        	66556770	        15.43 ns/op	      16 B/op	       1 allocs/op
+BenchmarkSlice/SliceCapacitySharing-20          	1000000000	    0.1084 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMap/SingleHash-20                      	   16770	     69884 ns/op	   54954 B/op	    1746 allocs/op
+BenchmarkMap/MultipleHash-20                    	   10000	    104664 ns/op	   99501 B/op	    1777 allocs/op
+BenchmarkChannel/Sync-20                        	 3457738	       320.4 ns/op	     128 B/op	       2 allocs/op
+BenchmarkChannel/Async-20                       	21709608	        54.74 ns/op	     112 B/op	       1 allocs/op
+BenchmarkChannel/SyncMulti-20                   	   90824	     12930 ns/op	    1200 B/op	       6 allocs/op
+BenchmarkChannel/AsyncMulti-20                  	  202257	      5241 ns/op	    2112 B/op	       6 allocs/op
+BenchmarkFixedPool/Normal_Use-20                	47145103	        25.41 ns/op	      24 B/op	       1 allocs/op
+BenchmarkFixedPool/Growth_Attempt-20            	 9716188	       118.2 ns/op	     216 B/op	       3 allocs/op
+BenchmarkGrowablePool/Normal_Use-20             	46072424	        25.17 ns/op	      24 B/op	       1 allocs/op
+BenchmarkGrowablePool/Growth_Allowed-20         	47000292	        26.01 ns/op	      24 B/op	       1 allocs/op
+PASS
+ok  	github.com/Predixus/go-tiger-style	18.792s
