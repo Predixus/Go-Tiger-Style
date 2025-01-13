@@ -6,3 +6,6 @@ bench:
 
 test:
 	go test -v ./...
+
+fuzz:
+	go test -fuzz FuzzReverse
