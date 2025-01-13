@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 )
 
@@ -167,11 +166,9 @@ func (p *GrowablePool) Put(buf []byte) {
 }
 
 func ReverseString(input string) string {
-	outString := strings.Split(input, "")
-	inString := strings.Split(input, "")
-
-	for ii := len(inString) - 1; ii >= 0; ii-- {
-		outString[len(inString)-ii-1] = inString[ii]
+	bytes := []byte(input)
+	for i, j := 0, len(bytes)-1; i < j; i, j = i+1, j-1 {
+		bytes[i], bytes[j] = bytes[j], bytes[i]
 	}
-	return strings.Join(outString, "")
+	return string(bytes)
 }

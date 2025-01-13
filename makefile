@@ -8,4 +8,4 @@ test:
 	go test -v ./...
 
 fuzz:
-	go test -fuzz FuzzReverse
+	go test -fuzz=.

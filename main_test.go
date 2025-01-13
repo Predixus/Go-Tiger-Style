@@ -317,22 +317,22 @@ func TestReverse(t *testing.T) {
 
 // Property-based test
 func FuzzReverse(f *testing.F) {
-	// Seed the corpus with the original test cases
 	seeds := []string{"", "a", "hello", "12345", "!@#$%"}
 	for _, seed := range seeds {
 		f.Add(seed)
 	}
 
-	// Fuzz test that verifies two canoncial properties of `Reverse`
 	f.Fuzz(func(t *testing.T, input string) {
 		// Property 1: reversing twice should return the original string
 		if twice := ReverseString(ReverseString(input)); twice != input {
 			t.Errorf("Double reverse failed: got %q, want %q", twice, input)
 		}
 
-		// Property 2: length should be preserved
-		if reversed := ReverseString(input); len(reversed) != len(input) {
-			t.Errorf("Length not preserved: got %d, want %d", len(reversed), len(input))
+		// Property 2: byte length should be preserved
+		reversed := ReverseString(input)
+		if len(reversed) != len(input) {
+			t.Errorf("Length not preserved: got %d bytes, want %d bytes",
+				len(reversed), len(input))
 		}
 	})
 }
