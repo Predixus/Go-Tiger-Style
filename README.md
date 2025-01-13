@@ -18,29 +18,18 @@ For our operations at Predixus, we are building data driven applications in Go. 
 in us going into the unknown and recovering the proverbial gold to distribute. And so the goal of a style is to
 guide and support development through the unknown.
 
-So, that being said, let's get into it.
-
 ## Technical Debt
 
 There is nothing to add here. Tigerstyle nailed it. Refer to
 [their comments](https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md#technical-debt) on technical debt.
 
-## Safety
+## Safety & Performance
+
+The code in many of these ammenedements has been implemented, tested, benchmarked and fuzzed. Look at [bench.txt](bench.txt)
+for details on the benchmarks and the `main.go` & `main_test.go` files for details on the tests.
 
 [NASAs Power of 10](https://spinroot.com/gerard/pdf/P10.pdf) still applies. But there are some modifications
 that we need to make that are specific to Go!:
-
-- Use explicitely-sized types for everything:
-
-  ```go
-    type myVar int16
-  ```
-
-  instead of
-
-  ```go
-    type myVar int
-  ```
 
 - Always be explicit about capacity, when allocating via `make`:
 
@@ -62,88 +51,105 @@ that we need to make that are specific to Go!:
      }
      ```
 
-  2. Preventing Capacity Sharing Between Slices
+2. Understanding Capacity Sharing Between Slices
 
-     Explicitly match capacity to length when you want to prevent slice operations from
-     accessing underlying array capacity:
+   There are two approaches to handling slice capacity sharing, each with different trade-offs:
+
+   - The first, is safe but costly (in allocations). This approach should be used when slice independence
+     needs to be garunteed.
 
      ```go
-     // Good: No capacity sharing
      original := make([]int16, 5, 5)
-     slice2 := original[0:3]     // slice2 has capacity of 3
-     slice2 = append(slice2, 6)  // Forces new allocation, original unchanged
+     slice2 := make([]int16, 3)
+     copy(slice2, original[0:3]) // Copy just the elements we want
+     slice2 = append(slice2, 6)  // Now this truly won't affect original
+     ```
 
-     // Bad: Hidden capacity sharing
+   - The second approach is fast, but requires careful handling as capacity of a single slice is shared.
+     Use when performance is critical and the implications are well understood.
+
+     ```go
      original := make([]int16, 5, 10)
-     slice2 := original[0:3]     // slice2 has capacity of 7
+     slice2 := original[0:3]     // slice2 shares backing array
      slice2 = append(slice2, 6)  // Modifies original's backing array!
      ```
 
-  3. Preventing Rehashing when Initialising Maps
+   Choose between these patterns based on your needs:
 
-     Pre-size maps when the approximate size is known to avoid expensive rehashing operations:
+   - Use no-sharing when slice independence is crucial for correctness
+   - Use sharing when performance is critical and you can carefully manage the slice relationships
+   - The sharing approach is ~140x faster but requires more careful programming (inspect the benchmarks)
 
-     ```go
-     // Good: Single hash table allocation
-     users := make(map[string]User, 1000)
-     for i := 0; i < 1000; i++ {
-         users[fmt.Sprintf("user%d", i)] = User{}  // No rehashing needed
-     }
+3. Preventing Rehashing when Initialising Maps
 
-     // Bad: Multiple rehashing operations
-     users := make(map[string]User)  // Default small capacity
-     for i := 0; i < 1000; i++ {
-         users[fmt.Sprintf("user%d", i)] = User{}  // Forces periodic rehashing
-     }
-     ```
+   Pre-size maps when the approximate size is known to avoid expensive rehashing operations:
 
-  4. Preventing Deadlocks in Channels
+   ```go
+   // Good: Single hash table allocation
+   users := make(map[string]User, 1000)
+   for i := 0; i < 1000; i++ {
+       users[fmt.Sprintf("user%d", i)] = User{}  // No rehashing needed
+   }
 
-     Be explicit about channel buffering intent, in the name of the variable to
-     prevent accidental deadlocks:
+   // Bad: Multiple rehashing operations
+   users := make(map[string]User)  // Default small capacity
+   for i := 0; i < 1000; i++ {
+       users[fmt.Sprintf("user%d", i)] = User{}  // Forces periodic rehashing
+   }
+   ```
 
-     ```go
-     // Good: Clear buffering intent for synchronous communication
-     chSync := make(chan int)
+4. Preventing Deadlocks in Channels
 
-     // Good: Buffered for async communication, up to a capacity
-     chAsync := make(chan int, 5)
+   Be explicit about channel buffering intent, in the name of the variable to
+   prevent accidental deadlocks:
 
-     // Bad: Default to unbuffered without considering communication patterns
-     ch := make(chan int)  // Might deadlock if async communication is needed
-     ```
+   ```go
+   // Good: Clear buffering intent for synchronous communication
+   chSync := make(chan int)
 
-  5. Explicit size Buffer Pools to Prevent Growth
+   // Good: Buffered for async communication, up to a capacity
+   chAsync := make(chan int, 5)
 
-     When implementing buffer pools, explicit capacity helps prevent buffer growth:
+   // Bad: Default to unbuffered without considering communication patterns
+   ch := make(chan int)  // Might deadlock if async communication is needed
+   ```
 
-     ```go
-     // Good: Fixed-size buffer pool
-     type Pool struct {
-         buffers sync.Pool
-     }
+5. Explicit size Buffer Pools to Prevent Growth
 
-     func NewPool() *Pool {
-         return &Pool{
-             buffers: sync.Pool{
-                 New: func() interface{} {
-                     return make([]byte, 0, 4096)  // Fixed capacity
-                 },
-             },
-         }
-     }
+   When implementing buffer pools, explicit capacity helps prevent buffer growth:
 
-     // Bad: Growable buffers can escape size constraints
-     func NewPool() *Pool {
-         return &Pool{
-             buffers: sync.Pool{
-                 New: func() interface{} {
-                     return make([]byte, 0)  // Can grow unbounded
-                 },
-             },
-         }
-     }
-     ```
+   ```go
+   // Good: Fixed-size buffer pool
+   type Pool struct {
+       buffers sync.Pool
+   }
+
+   func NewPool() *Pool {
+       return &Pool{
+           buffers: sync.Pool{
+               New: func() interface{} {
+                   return make([]byte, 0, 4096)  // Fixed capacity
+               },
+           },
+       }
+   }
+
+   // Bad: Growable buffers can escape size constraints
+   func NewPool() *Pool {
+       return &Pool{
+           buffers: sync.Pool{
+               New: func() interface{} {
+                   return make([]byte, 0)  // Can grow unbounded
+               },
+           },
+       }
+   }
+   ```
+
+   Choose based on your requirements:
+
+   - Use fixed-size pools when memory constraints are critical
+   - Use growable pools when performance is the priority
 
 - Go does not have any natural notion of `assert`. The Go development team have stated their view on this:
 
@@ -208,7 +214,7 @@ that we need to make that are specific to Go!:
   1. `count` should be of type `int16`
   2. The calling code expected to be able to pass negative integers
 
-- Assert the _Property Space_ wherever possible.
+- Assert the _Property Space_ wherever possible, and use Golangs Fuzzer to test it
 
   Property-based testing expands beyond traditional table-driven tests by verifying properties
   that should hold true for entire classes of inputs, rather than just specific examples. While
@@ -223,10 +229,9 @@ that we need to make that are specific to Go!:
   ```go
   import (
       "testing"
-      "github.com/stretchr/testify/assert"
   )
 
-  // Traditional table test
+  // Traditional table test - tests input output pairs
   func TestReverse(t *testing.T) {
       tests := []struct {
           input    string
@@ -243,28 +248,28 @@ that we need to make that are specific to Go!:
 
   // Property-based test
   func FuzzReverse(f *testing.F) {
-    // Seed the corpus with the original test cases
-    seeds := []string{"", "a", "hello", "12345", "!@#$%"}
-    for _, seed := range seeds {
-        f.Add(seed)
-    }
+  	seeds := []string{"", "a", "hello", "12345", "!@#$%"}
+  	for _, seed := range seeds {
+  		f.Add(seed)
+  	}
 
-    // Fuzz test that verifies two canoncial properties of `Reverse`
-    f.Fuzz(func(t *testing.T, input string) {
-        // Property 1: reversing twice should return the original string
-        if twice := Reverse(Reverse(input)); twice!=input {
-            t.Errorf("Double reverse failed: got %q, want %q", twice, input)
-        }
+  	f.Fuzz(func(t *testing.T, input string) {
+  		// Property 1: reversing twice should return the original string
+  		if twice := ReverseString(ReverseString(input)); twice != input {
+  			t.Errorf("Double reverse failed: got %q, want %q", twice, input)
+  		}
 
-        // Property 2: length should be preserved
-        if reversed := Reverse(input); len(reversed) != len(input) {
-            t.Errorf("Length not preserved: got %d, want %d", len(reversed), len(input))
-        }
-    })
+  		// Property 2: byte length should be preserved
+  		reversed := ReverseString(input)
+  		if len(reversed) != len(input) {
+  			t.Errorf("Length not preserved: got %d bytes, want %d bytes",
+  				len(reversed), len(input))
+  		}
+  	})
   }
   ```
 
-  Key properties to consider testing:
+  Key properties to consider testing when fuzzing:
 
   1. **Invariants**: Properties that should always hold true
   2. **Inverse operations**: Operations that should cancel each other out. E.g. encode/decode
@@ -272,7 +277,7 @@ that we need to make that are specific to Go!:
   4. **Non-Idempotency**: Operations that do _not_ yield the same result when applied multiple
      times. E.g. a hashing algorithm
 
-  When using runtime assertions to test for properties, focus on invariants that indicate
+  When using runtime assertions on properties, focus on invariants that indicate
   programmer errors:
 
   ```go
@@ -288,4 +293,4 @@ that we need to make that are specific to Go!:
   approaches. Use both to achieve the required test coverage for your application.
 
   - Use Go's static analysis tools (`go vet`, `staticcheck`, `golangci-lint`) at their
-    strictest settings.
+    strictest settings
