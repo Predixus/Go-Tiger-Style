@@ -211,7 +211,7 @@ that we need to make that are specific to Go!:
   If an assertion is raised, then the Counter has been incorrectly updated with a negative integer.
   This highlights two programmer errors:
 
-  1. `count` should be of type `int16`
+  1. `count` should be of type `uint16`
   2. The calling code expected to be able to pass negative integers
 
 - Assert the _Property Space_ wherever possible, and use Golangs Fuzzer to test it
