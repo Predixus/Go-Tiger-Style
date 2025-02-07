@@ -1,11 +1,11 @@
 # Go! Tiger Style
 
-A set of ammendmentments to [Tigerstyle](https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md),
+A set of amendments to [Tigerstyle](https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md),
 for Golang.
 
 First, I would read [TigerStyle](https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md) fully.
 
-This will provide a solid foundation for the Go! specific ammendements listed herein.
+This will provide a solid foundation for the Go! specific amendments listed herein.
 
 ## Why Style?
 
@@ -25,7 +25,7 @@ There is nothing to add here. Tigerstyle nailed it. Refer to
 
 ## Safety & Performance
 
-The code in many of these ammenedements has been implemented, tested, benchmarked and fuzzed. Look at [bench.txt](bench.txt)
+The code in many of these amendments has been implemented, tested, benchmarked and fuzzed. Look at [bench.txt](bench.txt)
 for details on the benchmarks and the `main.go` & `main_test.go` files for details on the tests.
 
 [NASAs Power of 10](https://spinroot.com/gerard/pdf/P10.pdf) still applies. But there are some modifications
